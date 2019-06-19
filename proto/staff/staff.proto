@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package staff;
+option go_package = "staff";
+
+service StaffAPI {
+	rpc GetStaff(GetStaffMessage) returns (StaffResponse);
+}
+
+message GetStaffMessage {
+	int64 staff_id = 1;
+}
+
+message StaffResponse {
+	int64 staff_id = 1;
+	string first_name = 2;
+	string last_name = 3;
+	int32 age = 4;
+	string email = 5;
+}
