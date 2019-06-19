@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/yukpiz/go-twirp-example/pb/user"
@@ -11,5 +12,8 @@ func main() {
 	server := &usv.Server{}
 	handler := user.NewUserAPIServer(server, nil)
 
-	http.ListenAndServe(":9991", handler)
+	err := http.ListenAndServe(":9991", handler)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

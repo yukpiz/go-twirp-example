@@ -34,6 +34,12 @@ import url "net/url"
 
 type UserAPI interface {
 	GetUser(context.Context, *GetUserMessage) (*UserResponse, error)
+
+	CreateUser(context.Context, *CreateUserMessage) (*UserResponse, error)
+
+	UpdateUser(context.Context, *UpdateUserMessage) (*UserResponse, error)
+
+	DeleteUser(context.Context, *DeleteUserMessage) (*EmptyResponse, error)
 }
 
 // =======================
@@ -42,15 +48,18 @@ type UserAPI interface {
 
 type userAPIProtobufClient struct {
 	client HTTPClient
-	urls   [1]string
+	urls   [4]string
 }
 
 // NewUserAPIProtobufClient creates a Protobuf client that implements the UserAPI interface.
 // It communicates using Protobuf and can be configured with a custom HTTPClient.
 func NewUserAPIProtobufClient(addr string, client HTTPClient) UserAPI {
 	prefix := urlBase(addr) + UserAPIPathPrefix
-	urls := [1]string{
+	urls := [4]string{
 		prefix + "GetUser",
+		prefix + "CreateUser",
+		prefix + "UpdateUser",
+		prefix + "DeleteUser",
 	}
 	if httpClient, ok := client.(*http.Client); ok {
 		return &userAPIProtobufClient{
@@ -76,21 +85,60 @@ func (c *userAPIProtobufClient) GetUser(ctx context.Context, in *GetUserMessage)
 	return out, nil
 }
 
+func (c *userAPIProtobufClient) CreateUser(ctx context.Context, in *CreateUserMessage) (*UserResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "user")
+	ctx = ctxsetters.WithServiceName(ctx, "UserAPI")
+	ctx = ctxsetters.WithMethodName(ctx, "CreateUser")
+	out := new(UserResponse)
+	err := doProtobufRequest(ctx, c.client, c.urls[1], in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userAPIProtobufClient) UpdateUser(ctx context.Context, in *UpdateUserMessage) (*UserResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "user")
+	ctx = ctxsetters.WithServiceName(ctx, "UserAPI")
+	ctx = ctxsetters.WithMethodName(ctx, "UpdateUser")
+	out := new(UserResponse)
+	err := doProtobufRequest(ctx, c.client, c.urls[2], in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userAPIProtobufClient) DeleteUser(ctx context.Context, in *DeleteUserMessage) (*EmptyResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "user")
+	ctx = ctxsetters.WithServiceName(ctx, "UserAPI")
+	ctx = ctxsetters.WithMethodName(ctx, "DeleteUser")
+	out := new(EmptyResponse)
+	err := doProtobufRequest(ctx, c.client, c.urls[3], in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ===================
 // UserAPI JSON Client
 // ===================
 
 type userAPIJSONClient struct {
 	client HTTPClient
-	urls   [1]string
+	urls   [4]string
 }
 
 // NewUserAPIJSONClient creates a JSON client that implements the UserAPI interface.
 // It communicates using JSON and can be configured with a custom HTTPClient.
 func NewUserAPIJSONClient(addr string, client HTTPClient) UserAPI {
 	prefix := urlBase(addr) + UserAPIPathPrefix
-	urls := [1]string{
+	urls := [4]string{
 		prefix + "GetUser",
+		prefix + "CreateUser",
+		prefix + "UpdateUser",
+		prefix + "DeleteUser",
 	}
 	if httpClient, ok := client.(*http.Client); ok {
 		return &userAPIJSONClient{
@@ -110,6 +158,42 @@ func (c *userAPIJSONClient) GetUser(ctx context.Context, in *GetUserMessage) (*U
 	ctx = ctxsetters.WithMethodName(ctx, "GetUser")
 	out := new(UserResponse)
 	err := doJSONRequest(ctx, c.client, c.urls[0], in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userAPIJSONClient) CreateUser(ctx context.Context, in *CreateUserMessage) (*UserResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "user")
+	ctx = ctxsetters.WithServiceName(ctx, "UserAPI")
+	ctx = ctxsetters.WithMethodName(ctx, "CreateUser")
+	out := new(UserResponse)
+	err := doJSONRequest(ctx, c.client, c.urls[1], in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userAPIJSONClient) UpdateUser(ctx context.Context, in *UpdateUserMessage) (*UserResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "user")
+	ctx = ctxsetters.WithServiceName(ctx, "UserAPI")
+	ctx = ctxsetters.WithMethodName(ctx, "UpdateUser")
+	out := new(UserResponse)
+	err := doJSONRequest(ctx, c.client, c.urls[2], in, out)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userAPIJSONClient) DeleteUser(ctx context.Context, in *DeleteUserMessage) (*EmptyResponse, error) {
+	ctx = ctxsetters.WithPackageName(ctx, "user")
+	ctx = ctxsetters.WithServiceName(ctx, "UserAPI")
+	ctx = ctxsetters.WithMethodName(ctx, "DeleteUser")
+	out := new(EmptyResponse)
+	err := doJSONRequest(ctx, c.client, c.urls[3], in, out)
 	if err != nil {
 		return nil, err
 	}
@@ -166,6 +250,15 @@ func (s *userAPIServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	switch req.URL.Path {
 	case "/twirp/user.UserAPI/GetUser":
 		s.serveGetUser(ctx, resp, req)
+		return
+	case "/twirp/user.UserAPI/CreateUser":
+		s.serveCreateUser(ctx, resp, req)
+		return
+	case "/twirp/user.UserAPI/UpdateUser":
+		s.serveUpdateUser(ctx, resp, req)
+		return
+	case "/twirp/user.UserAPI/DeleteUser":
+		s.serveDeleteUser(ctx, resp, req)
 		return
 	default:
 		msg := fmt.Sprintf("no handler for path %q", req.URL.Path)
@@ -281,6 +374,393 @@ func (s *userAPIServer) serveGetUserProtobuf(ctx context.Context, resp http.Resp
 	}
 	if respContent == nil {
 		s.writeError(ctx, resp, twirp.InternalError("received a nil *UserResponse and nil error while calling GetUser. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	respBytes, err := proto.Marshal(respContent)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal proto response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/protobuf")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *userAPIServer) serveCreateUser(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	header := req.Header.Get("Content-Type")
+	i := strings.Index(header, ";")
+	if i == -1 {
+		i = len(header)
+	}
+	switch strings.TrimSpace(strings.ToLower(header[:i])) {
+	case "application/json":
+		s.serveCreateUserJSON(ctx, resp, req)
+	case "application/protobuf":
+		s.serveCreateUserProtobuf(ctx, resp, req)
+	default:
+		msg := fmt.Sprintf("unexpected Content-Type: %q", req.Header.Get("Content-Type"))
+		twerr := badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, twerr)
+	}
+}
+
+func (s *userAPIServer) serveCreateUserJSON(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "CreateUser")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	reqContent := new(CreateUserMessage)
+	unmarshaler := jsonpb.Unmarshaler{AllowUnknownFields: true}
+	if err = unmarshaler.Unmarshal(req.Body, reqContent); err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to parse request json"))
+		return
+	}
+
+	// Call service method
+	var respContent *UserResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = s.UserAPI.CreateUser(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *UserResponse and nil error while calling CreateUser. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	var buf bytes.Buffer
+	marshaler := &jsonpb.Marshaler{OrigName: true}
+	if err = marshaler.Marshal(&buf, respContent); err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal json response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	respBytes := buf.Bytes()
+	resp.Header().Set("Content-Type", "application/json")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *userAPIServer) serveCreateUserProtobuf(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "CreateUser")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	buf, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to read request body"))
+		return
+	}
+	reqContent := new(CreateUserMessage)
+	if err = proto.Unmarshal(buf, reqContent); err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to parse request proto"))
+		return
+	}
+
+	// Call service method
+	var respContent *UserResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = s.UserAPI.CreateUser(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *UserResponse and nil error while calling CreateUser. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	respBytes, err := proto.Marshal(respContent)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal proto response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/protobuf")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *userAPIServer) serveUpdateUser(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	header := req.Header.Get("Content-Type")
+	i := strings.Index(header, ";")
+	if i == -1 {
+		i = len(header)
+	}
+	switch strings.TrimSpace(strings.ToLower(header[:i])) {
+	case "application/json":
+		s.serveUpdateUserJSON(ctx, resp, req)
+	case "application/protobuf":
+		s.serveUpdateUserProtobuf(ctx, resp, req)
+	default:
+		msg := fmt.Sprintf("unexpected Content-Type: %q", req.Header.Get("Content-Type"))
+		twerr := badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, twerr)
+	}
+}
+
+func (s *userAPIServer) serveUpdateUserJSON(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "UpdateUser")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	reqContent := new(UpdateUserMessage)
+	unmarshaler := jsonpb.Unmarshaler{AllowUnknownFields: true}
+	if err = unmarshaler.Unmarshal(req.Body, reqContent); err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to parse request json"))
+		return
+	}
+
+	// Call service method
+	var respContent *UserResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = s.UserAPI.UpdateUser(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *UserResponse and nil error while calling UpdateUser. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	var buf bytes.Buffer
+	marshaler := &jsonpb.Marshaler{OrigName: true}
+	if err = marshaler.Marshal(&buf, respContent); err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal json response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	respBytes := buf.Bytes()
+	resp.Header().Set("Content-Type", "application/json")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *userAPIServer) serveUpdateUserProtobuf(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "UpdateUser")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	buf, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to read request body"))
+		return
+	}
+	reqContent := new(UpdateUserMessage)
+	if err = proto.Unmarshal(buf, reqContent); err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to parse request proto"))
+		return
+	}
+
+	// Call service method
+	var respContent *UserResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = s.UserAPI.UpdateUser(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *UserResponse and nil error while calling UpdateUser. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	respBytes, err := proto.Marshal(respContent)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal proto response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	resp.Header().Set("Content-Type", "application/protobuf")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *userAPIServer) serveDeleteUser(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	header := req.Header.Get("Content-Type")
+	i := strings.Index(header, ";")
+	if i == -1 {
+		i = len(header)
+	}
+	switch strings.TrimSpace(strings.ToLower(header[:i])) {
+	case "application/json":
+		s.serveDeleteUserJSON(ctx, resp, req)
+	case "application/protobuf":
+		s.serveDeleteUserProtobuf(ctx, resp, req)
+	default:
+		msg := fmt.Sprintf("unexpected Content-Type: %q", req.Header.Get("Content-Type"))
+		twerr := badRouteError(msg, req.Method, req.URL.Path)
+		s.writeError(ctx, resp, twerr)
+	}
+}
+
+func (s *userAPIServer) serveDeleteUserJSON(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "DeleteUser")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	reqContent := new(DeleteUserMessage)
+	unmarshaler := jsonpb.Unmarshaler{AllowUnknownFields: true}
+	if err = unmarshaler.Unmarshal(req.Body, reqContent); err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to parse request json"))
+		return
+	}
+
+	// Call service method
+	var respContent *EmptyResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = s.UserAPI.DeleteUser(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *EmptyResponse and nil error while calling DeleteUser. nil responses are not supported"))
+		return
+	}
+
+	ctx = callResponsePrepared(ctx, s.hooks)
+
+	var buf bytes.Buffer
+	marshaler := &jsonpb.Marshaler{OrigName: true}
+	if err = marshaler.Marshal(&buf, respContent); err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to marshal json response"))
+		return
+	}
+
+	ctx = ctxsetters.WithStatusCode(ctx, http.StatusOK)
+	respBytes := buf.Bytes()
+	resp.Header().Set("Content-Type", "application/json")
+	resp.Header().Set("Content-Length", strconv.Itoa(len(respBytes)))
+	resp.WriteHeader(http.StatusOK)
+
+	if n, err := resp.Write(respBytes); err != nil {
+		msg := fmt.Sprintf("failed to write response, %d of %d bytes written: %s", n, len(respBytes), err.Error())
+		twerr := twirp.NewError(twirp.Unknown, msg)
+		callError(ctx, s.hooks, twerr)
+	}
+	callResponseSent(ctx, s.hooks)
+}
+
+func (s *userAPIServer) serveDeleteUserProtobuf(ctx context.Context, resp http.ResponseWriter, req *http.Request) {
+	var err error
+	ctx = ctxsetters.WithMethodName(ctx, "DeleteUser")
+	ctx, err = callRequestRouted(ctx, s.hooks)
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+
+	buf, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to read request body"))
+		return
+	}
+	reqContent := new(DeleteUserMessage)
+	if err = proto.Unmarshal(buf, reqContent); err != nil {
+		s.writeError(ctx, resp, wrapInternal(err, "failed to parse request proto"))
+		return
+	}
+
+	// Call service method
+	var respContent *EmptyResponse
+	func() {
+		defer ensurePanicResponses(ctx, resp, s.hooks)
+		respContent, err = s.UserAPI.DeleteUser(ctx, reqContent)
+	}()
+
+	if err != nil {
+		s.writeError(ctx, resp, err)
+		return
+	}
+	if respContent == nil {
+		s.writeError(ctx, resp, twirp.InternalError("received a nil *EmptyResponse and nil error while calling DeleteUser. nil responses are not supported"))
 		return
 	}
 
@@ -788,19 +1268,24 @@ func callError(ctx context.Context, h *twirp.ServerHooks, err twirp.Error) conte
 }
 
 var twirpFileDescriptor0 = []byte{
-	// 210 bytes of a gzipped FileDescriptorProto
+	// 297 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x2f, 0x2d, 0x4e, 0x2d,
 	0xd2, 0x07, 0x11, 0x7a, 0x05, 0x45, 0xf9, 0x25, 0xf9, 0x42, 0x2c, 0x20, 0xb6, 0x92, 0x26, 0x17,
 	0x9f, 0x7b, 0x6a, 0x49, 0x68, 0x71, 0x6a, 0x91, 0x6f, 0x6a, 0x71, 0x71, 0x62, 0x7a, 0xaa, 0x90,
 	0x38, 0x17, 0x3b, 0x48, 0x26, 0x3e, 0x33, 0x45, 0x82, 0x51, 0x81, 0x51, 0x83, 0x39, 0x88, 0x0d,
-	0xc4, 0xf5, 0x4c, 0x51, 0xea, 0x66, 0xe4, 0xe2, 0x01, 0x29, 0x0c, 0x4a, 0x2d, 0x2e, 0xc8, 0xcf,
-	0x2b, 0xc6, 0xad, 0x52, 0x48, 0x96, 0x8b, 0x2b, 0x2d, 0xb3, 0xa8, 0xb8, 0x24, 0x3e, 0x2f, 0x31,
-	0x37, 0x55, 0x82, 0x49, 0x81, 0x51, 0x83, 0x33, 0x88, 0x13, 0x2c, 0xe2, 0x97, 0x98, 0x9b, 0x2a,
-	0x24, 0xcd, 0xc5, 0x99, 0x93, 0x08, 0x93, 0x65, 0x06, 0xcb, 0x72, 0x80, 0x04, 0xc0, 0x92, 0x02,
-	0x5c, 0xcc, 0x89, 0xe9, 0xa9, 0x12, 0x2c, 0x0a, 0x8c, 0x1a, 0xac, 0x41, 0x20, 0xa6, 0x90, 0x08,
-	0x17, 0x6b, 0x6a, 0x6e, 0x62, 0x66, 0x8e, 0x04, 0x2b, 0x58, 0x29, 0x84, 0x63, 0x64, 0xc7, 0xc5,
-	0x0e, 0x72, 0x8c, 0x63, 0x80, 0xa7, 0x90, 0x31, 0x17, 0x3b, 0xd4, 0x0f, 0x42, 0x22, 0x7a, 0x60,
-	0x1f, 0xa2, 0x7a, 0x49, 0x4a, 0x08, 0x22, 0x8a, 0xec, 0x78, 0x27, 0xb6, 0x28, 0x70, 0x00, 0x24,
-	0xb1, 0x81, 0x43, 0xc3, 0x18, 0x10, 0x00, 0x00, 0xff, 0xff, 0xe7, 0x43, 0xfb, 0xf3, 0x20, 0x01,
-	0x00, 0x00,
+	0xc4, 0xf5, 0x4c, 0x51, 0xd2, 0xe1, 0x12, 0x74, 0x49, 0xcd, 0x49, 0x2d, 0x49, 0x25, 0x4a, 0x75,
+	0x39, 0x97, 0xa0, 0x73, 0x51, 0x6a, 0x22, 0xaa, 0x6a, 0x59, 0x2e, 0xae, 0xb4, 0xcc, 0xa2, 0xe2,
+	0x92, 0xf8, 0xbc, 0xc4, 0xdc, 0x54, 0x09, 0x26, 0x05, 0x46, 0x0d, 0xce, 0x20, 0x4e, 0xb0, 0x88,
+	0x5f, 0x62, 0x6e, 0xaa, 0x90, 0x34, 0x17, 0x67, 0x4e, 0x22, 0x4c, 0x96, 0x19, 0x2c, 0xcb, 0x01,
+	0x12, 0x00, 0x4b, 0x0a, 0x70, 0x31, 0x27, 0xa6, 0xa7, 0x4a, 0xb0, 0x28, 0x30, 0x6a, 0xb0, 0x06,
+	0x81, 0x98, 0x42, 0x22, 0x5c, 0xac, 0xa9, 0xb9, 0x89, 0x99, 0x39, 0x12, 0xac, 0x60, 0xa5, 0x10,
+	0x8e, 0xd2, 0x04, 0x46, 0x2e, 0xc1, 0xd0, 0x82, 0x94, 0x44, 0xe2, 0xdc, 0x49, 0x17, 0x27, 0x75,
+	0x33, 0x72, 0xf1, 0x80, 0x1c, 0x13, 0x94, 0x5a, 0x5c, 0x90, 0x9f, 0x57, 0x3c, 0xc0, 0xae, 0xe1,
+	0xe7, 0xe2, 0x75, 0xcd, 0x2d, 0x28, 0xa9, 0x84, 0xb9, 0xc6, 0xe8, 0x03, 0x23, 0x17, 0x3b, 0xc8,
+	0x79, 0x8e, 0x01, 0x9e, 0x42, 0xc6, 0x5c, 0xec, 0xd0, 0xf4, 0x20, 0x24, 0xa2, 0x07, 0x4e, 0x2d,
+	0xa8, 0xc9, 0x43, 0x4a, 0x08, 0x22, 0x8a, 0xe2, 0x1d, 0x4b, 0x2e, 0x2e, 0x44, 0x5c, 0x0b, 0x89,
+	0x43, 0x54, 0x60, 0xc4, 0x3e, 0x2e, 0xad, 0x88, 0xc8, 0x82, 0x69, 0xc5, 0x88, 0x3e, 0xac, 0x5a,
+	0xad, 0xb8, 0xb8, 0x10, 0xe9, 0x11, 0xa6, 0x15, 0x23, 0x85, 0x4a, 0x09, 0x43, 0x24, 0x50, 0xbc,
+	0xec, 0xc4, 0x16, 0x05, 0x4e, 0xfe, 0x49, 0x6c, 0xe0, 0xbc, 0x60, 0x0c, 0x08, 0x00, 0x00, 0xff,
+	0xff, 0x9b, 0x42, 0xca, 0x42, 0x1e, 0x03, 0x00, 0x00,
 }

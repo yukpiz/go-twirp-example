@@ -5,10 +5,32 @@ option go_package = "user";
 
 service UserAPI {
 	rpc GetUser(GetUserMessage) returns (UserResponse);
+	rpc CreateUser(CreateUserMessage) returns (UserResponse);
+	rpc UpdateUser(UpdateUserMessage) returns (UserResponse);
+	rpc DeleteUser(DeleteUserMessage) returns (EmptyResponse);
 }
 
 message GetUserMessage {
 	int64 user_id = 1;
+}
+
+message DeleteUserMessage {
+	int64 user_id = 1;
+}
+
+message CreateUserMessage {
+	string first_name = 2;
+	string last_name = 3;
+	int32 age = 4;
+	string email = 5;
+}
+
+message UpdateUserMessage {
+	int64 user_id = 1;
+	string first_name = 2;
+	string last_name = 3;
+	int32 age = 4;
+	string email = 5;
 }
 
 message UserResponse {
@@ -18,3 +40,5 @@ message UserResponse {
 	int32 age = 4;
 	string email = 5;
 }
+
+message EmptyResponse {}
