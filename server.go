@@ -4,15 +4,22 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/yukpiz/go-twirp-example/pb/staff"
 	"github.com/yukpiz/go-twirp-example/pb/user"
-	usv "github.com/yukpiz/go-twirp-example/server/user"
+	sserver "github.com/yukpiz/go-twirp-example/server/staff"
+	userver "github.com/yukpiz/go-twirp-example/server/user"
 )
 
 func main() {
-	server := &usv.Server{}
-	handler := user.NewUserAPIServer(server, nil)
+	usv := &userver.Server{}
+	uh := user.NewUserAPIServer(usv, nil)
+	http.Handle(user.UserAPIPathPrefix, uh)
 
-	err := http.ListenAndServe(":9991", handler)
+	ssv := &sserver.Server{}
+	sh := staff.NewStaffAPIServer(ssv, nil)
+	http.Handle(staff.StaffAPIPathPrefix, sh)
+
+	err := http.ListenAndServe(":9991", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
